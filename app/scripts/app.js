@@ -23,6 +23,10 @@ app.run(['$rootScope', function($rootScope){
   socket.on('newMail', function(data) {
     $rootScope.$emit('newMail', data);
   });
+
+  socket.on('deleteMail', function(data) {
+    $rootScope.$emit('deleteMail', data);
+  });
   
   $rootScope.$on('Refresh', function() {
     console.log('Refresh event called.');
@@ -48,12 +52,11 @@ app.filter('newLines', function() {
 
 (function(){
 
-  var sidebar             = document.querySelector('.sidebar')
-    , sidebarHeader       = document.querySelector('.sidebar-header')
-    , emailList           = document.querySelector('.email-list')
-    , sidebarHeaderHeight = sidebarHeader.getBoundingClientRect().height
-    , resizeTimeout       = null
-    ;
+  var sidebar             = document.querySelector('.sidebar');
+  var sidebarHeader       = document.querySelector('.sidebar-header');
+  var emailList           = document.querySelector('.email-list');
+  var sidebarHeaderHeight = sidebarHeader.getBoundingClientRect().height;
+  var resizeTimeout       = null;
 
   function adjustEmailListHeight(){
     var newEmailListHeight = sidebar.getBoundingClientRect().height - sidebarHeaderHeight;

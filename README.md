@@ -1,10 +1,11 @@
 # MailDev
 
-[![NPM version](https://badge.fury.io/js/maildev.png)](http://badge.fury.io/js/maildev)
+[![Build Status](https://api.travis-ci.org/djfarrelly/MailDev.svg)](https://travis-ci.org/djfarrelly/MailDev)
+[![NPM Version](https://img.shields.io/npm/v/maildev.svg)](https://www.npmjs.com/package/maildev)
 
 **MailDev** is a simple way to test your project's generated emails during development with an easy to use web interface that runs on your machine built on top of [Node.js](http://www.nodejs.org).
 
-![MailDev Screenshot](https://dl.dropboxusercontent.com/u/50627698/maildev-01-05-14.png)
+![MailDev Screenshot](https://dl.dropboxusercontent.com/u/50627698/maildev/screenshot-2015-03-29.png)
 
 ## Install & Run
 
@@ -13,25 +14,35 @@
 
 If you want to use MailDev with [Docker](https://www.docker.com/), you can use the ['djfarrelly/maildev' image on Docker Hub](https://registry.hub.docker.com/u/djfarrelly/maildev/).
 
+For convenient use with Grunt, try [grunt-maildev](https://github.com/xavierpriour/grunt-maildev).
+
 ## Usage
 
     maildev [options]
 
-      -h, --help              output usage information
-      -V, --version           output the version number
-      -s, --smtp [port]       SMTP port to catch emails [1025]
-      -w, --web [port]        Port to run the Web GUI [1080]
-      --outgoing-host <host>  SMTP host for outgoing emails
-      --outgoing-port <port>  SMTP port for outgoing emails
-      --outgoing-user <user>  SMTP user for outgoing emails
-      --outgoing-pass <pass>  SMTP password for outgoing emails
-      --outgoing-secure       Use SMTP SSL for outgoing emails
-      -o, --open              Open the Web GUI after startup
+      -h, --help                    output usage information
+      -V, --version                 output the version number
+      -s, --smtp <port>             SMTP port to catch emails [1025]
+      -w, --web <port>              Port to run the Web GUI [1080]
+      --ip <ip address>             IP Address to bind services to [0.0.0.0]
+      --outgoing-host <host>        SMTP host for outgoing emails
+      --outgoing-port <port>        SMTP port for outgoing emails
+      --outgoing-user <user>        SMTP user for outgoing emails
+      --outgoing-pass <pass>        SMTP password for outgoing emails
+      --outgoing-secure             Use SMTP SSL for outgoing emails
+      --auto-relay                  Use auto relay mode
+      --auto-relay-rules <file>     Filter rules for auto relay mode
+      --incoming-user <user>        SMTP user for incoming emails
+      --incoming-pass <pass>        SMTP password for incoming emails
+      --web-ip <ip address>         IP Address to bind HTTP service to, defaults to --ip
+      --web-user <user>             HTTP basic auth username
+      --web-pass <pass>             HTTP basic auth password
+      -o, --open                    Open the Web GUI after startup
       -v, --verbose
 
 ## API
 
-MailDev can be used in your Node.js application. For more info view the 
+MailDev can be used in your Node.js application. For more info view the
 [API docs](https://github.com/djfarrelly/MailDev/blob/master/docs/api.md).
 
 ```javascript
@@ -39,23 +50,60 @@ var MailDev = require('maildev');
 
 var maildev = new MailDev();
 
+maildev.listen();
+
 maildev.on('new', function(email){
   // We got a new email!
 });
 ```
 
-MailDev also has a **REST API**. For more info 
+MailDev also has a **REST API**. For more info
 [view the docs](https://github.com/djfarrelly/MailDev/blob/master/docs/rest.md).
 
 ## Outgoing email
 
 Maildev optionally supports selectively relaying email to an outgoing SMTP server.  If you configure outgoing
-email with the --outgoing-xxx options you can click "Relay" on an individual email to relay through MailDev out
-to a real SMTP service that will really send the email.
+email with the --outgoing-* options you can click "Relay" on an individual email to relay through MailDev out
+to a real SMTP service that will *actually* send the email to the recipient.
 
   Example:
 
-    $ maildev --outgoing-host smtp.gmail.com --outgoing-secure --outgoing-user 'you@gmail.com' --outgoing-pass '<pass>'
+    $ maildev --outgoing-host smtp.gmail.com \
+              --outgoing-secure \
+              --outgoing-user 'you@gmail.com' \
+              --outgoing-pass '<pass>'
+
+### Auto relay mode
+
+Enabling the auto relay mode will automatically send each email to it's recipient
+without the need to click the "Relay" button mentioned above.
+The outgoing email options are required to enable this feature.
+
+Additionally, you can pass a valid json file with additional configuration for
+what email addresses you would like to `allow` or `deny`. The last matching
+rule in the array will be the rule MailDev will follow.
+
+  Example:
+
+    $ maildev --outgoing-host smtp.gmail.com \
+              --outgoing-secure \
+              --outgoing-user 'you@gmail.com' \
+              --outgoing-pass '<pass>' \
+              --auto-relay \
+              --auto-relay-rules file.json
+
+  Rules example file:
+```javascript
+[
+	{ "allow": "*" },
+	{ "deny":  "*@test.com" },
+	{ "allow": "ok@test.com" },
+	{ "deny":  "*@utah.com" },
+	{ "allow": "johnny@utah.com" }
+]
+```
+  This would allow `angelo@fbi.gov`, `ok@test.com`, `johnny@utah.com`, but deny
+  `bodhi@test.com`.
 
 ## Configure your project
 
@@ -107,7 +155,7 @@ If you're using MailDev and you have a great idea, I'd love to hear it. If you'r
 
 ## Contributing
 
-Any help on MailDev would be awesome. There is plenty of room for improvement. Feel free to [create a Pull Request](https://github.com/djfarrelly/MailDev/issues/new) from small to big changes. 
+Any help on MailDev would be awesome. There is plenty of room for improvement. Feel free to [create a Pull Request](https://github.com/djfarrelly/MailDev/issues/new) from small to big changes.
 
 To run **MailDev** during development:
 
@@ -120,40 +168,11 @@ To run **MailDev** during development:
 
 The `grunt dev` task will run the project using nodemon and restart automatically when changes are detected. SASS files will be compiled automatically on save also. To trigger some emails for testing run `node test/send.js` in a separate shell. Please run jshint to your lint code before submitting a pull request; run `grunt jshint`.
 
-To run the test suite, use [Mocha](http://visionmedia.github.io/mocha/):
+To run the test suite:
 
-    $ npm install -g mocha
-    $ mocha
+    $ npm run test
 
-## Changelog
-
-0.9.0 - Add ability to download `.eml` files
-
-0.8.1 - Fix temp directory bug introduced in 0.8.0
-
-0.8.0 - Add view email source. Fix running multiple instances.
-
-0.7.0 - Add Docker support
-
-0.6.3 - Add auto-show new email. UI adjustments.
-
-0.6.2 - Fix module entry point. Bug fixes.
-
-0.6.1 - Bug fixes and improvements
-
-0.6.0 - Add relay option to send outgoing emails. Refactor for new API.
-
-0.5.2 - Lock down dependency versions
-
-0.5.1 - Fix menu layout issue in Safari
-
-0.5.0 - Add command line interface. Web UI redesign.
-
-0.4.0 - Add ability to receive and view attachments
-
-0.3.1 - Add Socket.io for immediate email arrival to interface
-
-0.3.0 - Initial open source release
+## [Changelog](https://github.com/djfarrelly/MailDev/releases)
 
 ## Thanks
 

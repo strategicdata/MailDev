@@ -12,10 +12,20 @@ app.controller('MainCtrl', [
     $scope.configOpen = false;
     $scope.currentItemId = null;
     $scope.autoShow = false;
+    $scope.unreadItems = 0;
+
+    var countUnread = function() {
+      $scope.unreadItems = $scope.items.filter(function(email) {
+        return !email.read;
+      }).length;
+    };
 
     // Load all emails
     var loadData = function() {
       $scope.items = Email.query();
+      $scope.items.$promise.then(function() {
+        countUnread();
+      });
     };
 
     $rootScope.$on('Refresh', function(e, d) {
@@ -33,6 +43,7 @@ app.controller('MainCtrl', [
       
       //update model
       $scope.items.push(newEmail);
+      countUnread();
 
       //update DOM at most 5 times per second
       if (!refreshTimeout) {
@@ -46,10 +57,35 @@ app.controller('MainCtrl', [
       }
 
     });
+    
+    $rootScope.$on('deleteMail', function(e, email) {
+      if (email.id === 'all') {
+        $rootScope.$emit('Refresh');
+        $location.path('/');
+      } else {
+        var idx = $scope.items.reduce(function(p, c, i){
+          if (p !== 0) return p;
+          return c.id === email.id ? i : 0;
+        }, 0);
+
+        var nextIdx = $scope.items.length === 1 ? null :
+                      idx === 0 ? idx + 1 : idx - 1;
+        if (nextIdx !== null) {
+          $location.path('/email/' + $scope.items[nextIdx].id);
+        } else {
+          $location.path('/');
+        }
+        
+        $scope.items.splice(idx, 1);
+        countUnread();
+        $scope.$apply();
+      }
+    });
 
     // Click event handlers
     $scope.markRead = function(email) {
       email.read = true;
+      countUnread();
     };
 
     $scope.showConfig = function(){
@@ -86,10 +122,7 @@ app.controller('NavCtrl', [
 
     $scope.deleteAll = function() {
 
-      Email.delete({ id: 'all' }, function(email) {
-        $rootScope.$emit('Refresh');
-        $location.path('/');
-      });
+      Email.delete({ id: 'all' });
 
     };
 
